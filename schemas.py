@@ -1,58 +1,104 @@
-from pydantic import BaseModel, EmailStr
-from typing import List, Optional
+from pydantic import BaseModel
+from typing import List, Optional, Any
+from datetime import datetime
 
 
-class UserRegister(BaseModel):
-    email: EmailStr
+class UserRegisterParams(BaseModel):
+    login_number: str
+    name: str
+    depart: str
+    job: str
     password: str
 
 
-class UserLogin(BaseModel):
-    email: EmailStr
+class UserLoginParams(BaseModel):
+    login_number: str
     password: str
 
 
-class TokenResponse(BaseModel):
+class UserResponse(BaseModel):
     jwt_token: str
-    user_id: int
-
-
-class ExerciseResponse(BaseModel):
+    name: str
     id: int
+    depart: str
+    job: str
+
+
+class QuestionDetailResponse(BaseModel):
+    question_id: int
+    question_type: str
+    content: str
+    options: Any
+
+
+class ExerciseDetailResponse(BaseModel):
+    exercise_id: int
     title: str
-    description: str
+    content: str
+    questions: List[QuestionDetailResponse]
 
 
-class QuestionResponse(BaseModel):
-    id: int
-    question_text: str
+class QuestionCorrectResponse(BaseModel):
+    question_id: int
+    question_type: str
+    content: str
+    options: Any
+    answer: str
 
 
-class ExamResponse(BaseModel):
-    id: int
-    exercise_id: int
-    score: Optional[int]
-    credits_earned: Optional[int]
-    total_time: Optional[int]
+class ExamCreateParams(BaseModel):
+    title: str
+    exercise_ids: List[int]
 
 
-class MakeExamBody(BaseModel):
-    exercise_id: int
+class ExamDetail(BaseModel):
+    question_ids: List[int]
 
 
-class SubmitExamBody(BaseModel):
-    exam_object: dict
+class ExamDetailResponse(BaseModel):
+    exam_id: int
+    questions: List[QuestionDetailResponse]
 
 
-class QuestionChatBody(BaseModel):
+class UserAnswer(BaseModel):
+    question_id: int
+    answer: str
+
+
+class ExamSubmitParams(BaseModel):
+    exam_id: int
+    user_answers: List[UserAnswer]
+
+
+class ExamSubmitResponse(BaseModel):
+    exam_id: int
+    score: int
+    time: int
+    questions: List[QuestionDetailResponse]
+    user_answers: List[UserAnswer]
+
+
+class ExamHistoryDetailResponse(BaseModel):
+    exam_id: int
+    score: int
+    time: int
+    questions: List[QuestionDetailResponse]
+    user_answers: List[UserAnswer]
+
+
+class QuestionHistoryDetailResponse(BaseModel):
+    user_id: int
+    question_id: int
+    exam_id: int
+    user_answer: str
+    is_correct: bool
+
+
+class AIChatParams(BaseModel):
+    exam_id: int
     question_id: int
     content: str
-    history_message: Optional[List[dict]] = []
 
 
-# Leaderboard response
-class LeaderboardUser(BaseModel):
-    user_id: int
-    email: str
-    credits: int
-    total_exam_time: int
+class AIChatResponse(BaseModel):
+    ai_output: str

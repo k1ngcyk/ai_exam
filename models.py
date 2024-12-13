@@ -1,63 +1,93 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, DateTime, Text
+from sqlalchemy import Column, Integer, String, Boolean, JSON, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
-from sqlalchemy.dialects.sqlite import JSON
-from .database import Base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
+
+Base = declarative_base()
 
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    password_hash = Column(String)
-    credits = Column(Integer, default=0)
-    total_exam_time = Column(Integer, default=0)
 
-    exams = relationship("Exam", back_populates="user")
+    id = Column(Integer, primary_key=True, index=True)
+    login_number = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String)
+    depart = Column(String)
+    job = Column(String)
+    password = Column(String)
+    credit = Column(Integer, default=0)
+    learning_time = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Exercise(Base):
     __tablename__ = "exercises"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String)
-    description = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    questions = relationship("Question", back_populates="exercise")
+    content = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Question(Base):
     __tablename__ = "questions"
     id = Column(Integer, primary_key=True, index=True)
+    question_type = Column(String)
+    content = Column(String)
+    options = Column(JSON)
+    answer = Column(String)
     exercise_id = Column(Integer, ForeignKey("exercises.id"))
-    question_text = Column(String)
-    correct_answer = Column(String)
-    metadata = Column(Text)
-
-    exercise = relationship("Exercise", back_populates="questions")
+    exercise = relationship("Exercise", backref="questions")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class Exam(Base):
     __tablename__ = "exams"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    exercise_id = Column(Integer, ForeignKey("exercises.id"))
-    score = Column(Integer)
-    credits_earned = Column(Integer, default=0)
-    total_time = Column(Integer, default=0)  # in seconds
-    taken_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User", back_populates="exams")
-    exercise = relationship("Exercise")
-    exam_questions = relationship("ExamQuestion", back_populates="exam")
+    title = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    user = relationship("User", backref="exams")
 
 
-class ExamQuestion(Base):
-    __tablename__ = "exam_questions"
+class ExamHistory(Base):
+    __tablename__ = "exam_histories"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
     exam_id = Column(Integer, ForeignKey("exams.id"))
-    question_id = Column(Integer, ForeignKey("questions.id"))
-    user_answer = Column(String)
-    correct = Column(Boolean)
+    score = Column(Integer, default=0)
+    time_used = Column(Integer, default=0)  # time in seconds maybe
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    user = relationship("User", backref="exam_histories")
+    exam = relationship("Exam", backref="exam_histories")
 
-    exam = relationship("Exam", back_populates="exam_questions")
+
+class QuestionHistory(Base):
+    __tablename__ = "question_histories"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    question_id = Column(Integer, ForeignKey("questions.id"))
+    exam_id = Column(Integer, ForeignKey("exams.id"))
+    user_answer = Column(String, nullable=True)
+    is_correct = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+    user = relationship("User", backref="question_histories")
+    question = relationship("Question", backref="question_histories")
+    exam = relationship("Exam", backref="question_histories")
