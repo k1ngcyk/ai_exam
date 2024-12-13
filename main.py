@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 from jose import jwt
 import time
+import asyncio
 
 from models import Base, User, Exercise, Question, Exam, ExamHistory, QuestionHistory
 from schemas import (
@@ -259,6 +261,7 @@ def submit_exam(
             # If there's no question_history record, skip or raise
             continue
         correct_answer = q_map[ua.question_id].answer
+        # WIP: check if answer is correct
         is_correct = correct_answer == ua.answer
         if is_correct:
             score += 10
@@ -483,6 +486,20 @@ def question_history_list(
     return results
 
 
+async def generate_text():
+    """Simulates an AI chat response generator."""
+    responses = [
+        "Hello! How can I assist you today?",
+        "It seems like you want to stream text responses.",
+        "This response is streamed in real-time.",
+        "FastAPI makes streaming text easy!",
+        "Goodbye and take care!",
+    ]
+    for response in responses:
+        yield response + "\n"  # Yield each response with a newline
+        await asyncio.sleep(1)  # Simulate delay between chunks
+
+
 @app.post("/api/question/chat", response_model=AIChatResponse)
 def ai_chat(
     params: AIChatParams,
@@ -491,4 +508,6 @@ def ai_chat(
 ):
     # Placeholder: This would call an AI model or service
     # For now, just echo input
+    return StreamingResponse(generate_text(), media_type="text/plain")
+
     return AIChatResponse(ai_output=f"AI response to: {params.content}")
