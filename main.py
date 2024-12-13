@@ -67,7 +67,8 @@ def get_current_user(
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
         return user
-    except jwt.PyJWTError:
+    except jwt.JWTError as e:
+        print(e)
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
@@ -99,7 +100,7 @@ def user_register(params: UserRegisterParams, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    access_token = create_access_token({"sub": user.id})
+    access_token = create_access_token({"sub": str(user.id)})
     return UserResponse(
         jwt_token=access_token,
         name=user.name,
@@ -116,7 +117,7 @@ def user_login(params: UserLoginParams, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User not found")
     if not verify_password(params.password, user.password):
         raise HTTPException(status_code=401, detail="Incorrect password")
-    access_token = create_access_token({"sub": user.id})
+    access_token = create_access_token({"sub": str(user.id)})
     return UserResponse(
         jwt_token=access_token,
         name=user.name,
@@ -277,13 +278,15 @@ def submit_exam(
             .count()
         )
 
-        if count_attempts == 1 and is_correct:
+        if count_attempts == 0 and is_correct:
             # first time correct, update user credit
             user.credit += 10
             db.add(user)
 
     eh.score = score
     eh.time_used = elapsed_time
+    user.learning_time += elapsed_time
+    db.add(user)
     db.add(eh)
     db.commit()
 
