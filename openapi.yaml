@@ -1,0 +1,497 @@
+openapi: 3.0.3
+info:
+  title: Example API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+
+tags:
+  - name: User
+  - name: Exercise
+  - name: Exam
+  - name: Leaderboard
+  - name: Question
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserRegisterParams:
+      type: object
+      properties:
+        login_number:
+          type: string
+        name:
+          type: string
+        depart:
+          type: string
+        job:
+          type: string
+        password:
+          type: string
+      required: [login_number, name, depart, job, password]
+
+    UserLoginParams:
+      type: object
+      properties:
+        login_number:
+          type: string
+        password:
+          type: string
+      required: [login_number, password]
+
+    UserResponse:
+      type: object
+      properties:
+        jwt_token:
+          type: string
+        name:
+          type: string
+        id:
+          type: integer
+        depart:
+          type: string
+        job:
+          type: string
+
+    QuestionDetailResponse:
+      type: object
+      properties:
+        question_id:
+          type: integer
+        question_type:
+          type: string
+        content:
+          type: string
+        options:
+          type: object
+
+    ExerciseDetailResponse:
+      type: object
+      properties:
+        exercise_id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+
+    QuestionCorrectResponse:
+      type: object
+      properties:
+        question_id:
+          type: integer
+        question_type:
+          type: string
+        content:
+          type: string
+        options:
+          type: object
+        answer:
+          type: string
+
+    ExamCreateParams:
+      type: object
+      properties:
+        title:
+          type: string
+        exercise_ids:
+          type: array
+          items:
+            type: integer
+      required: [title, exercise_ids]
+
+    ExamDetail:
+      type: object
+      properties:
+        question_ids:
+          type: array
+          items:
+            type: integer
+
+    ExamDetailResponse:
+      type: object
+      properties:
+        exam_id:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+
+    UserAnswer:
+      type: object
+      properties:
+        question_id:
+          type: integer
+        answer:
+          type: string
+      required: [question_id, answer]
+
+    ExamSubmitParams:
+      type: object
+      properties:
+        exam_id:
+          type: integer
+        user_answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserAnswer"
+      required: [exam_id, user_answers]
+
+    ExamSubmitResponse:
+      type: object
+      properties:
+        exam_id:
+          type: integer
+        score:
+          type: integer
+        time:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+        user_answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserAnswer"
+
+    ExamHistoryDetailResponse:
+      type: object
+      properties:
+        exam_id:
+          type: integer
+        score:
+          type: integer
+        time:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+        user_answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserAnswer"
+
+    QuestionHistoryDetailResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        question_id:
+          type: integer
+        exam_id:
+          type: integer
+        user_answer:
+          type: string
+        is_correct:
+          type: boolean
+
+    AIChatParams:
+      type: object
+      properties:
+        exam_id:
+          type: integer
+        question_id:
+          type: integer
+        content:
+          type: string
+      required: [exam_id, question_id, content]
+
+    AIChatResponse:
+      type: object
+      properties:
+        ai_output:
+          type: string
+
+paths:
+  /api/user/register:
+    post:
+      tags: [User]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterParams"
+      responses:
+        "200":
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: User already exists
+
+  /api/user/login:
+    post:
+      tags: [User]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLoginParams"
+      responses:
+        "200":
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Incorrect password or invalid credentials
+
+  /api/exercise:
+    get:
+      tags: [Exercise]
+      summary: Get list of exercises
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          required: false
+      responses:
+        "200":
+          description: A list of exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExerciseDetailResponse"
+
+  /api/exercise/{id}:
+    get:
+      tags: [Exercise]
+      summary: Get detail of an exercise
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exercise detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseDetailResponse"
+        "404":
+          description: Exercise not found
+
+  /api/exam:
+    post:
+      tags: [Exam]
+      summary: Create a new exam
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExamCreateParams"
+      responses:
+        "200":
+          description: Exam created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamDetailResponse"
+        "401":
+          description: Unauthorized
+
+  /api/exam/submit:
+    post:
+      tags: [Exam]
+      summary: Submit an exam
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExamSubmitParams"
+      responses:
+        "200":
+          description: Exam submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamSubmitResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: Exam not found
+
+  /api/leaderboard/credits:
+    get:
+      tags: [Leaderboard]
+      summary: Leaderboard sorted by credits
+      responses:
+        "200":
+          description: Leaderboard by credits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    credit:
+                      type: integer
+                    depart:
+                      type: string
+                    job:
+                      type: string
+
+  /api/leaderboard/times:
+    get:
+      tags: [Leaderboard]
+      summary: Leaderboard sorted by learning time
+      responses:
+        "200":
+          description: Leaderboard by time
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    learning_time:
+                      type: integer
+                    depart:
+                      type: string
+                    job:
+                      type: string
+
+  /api/exam/history:
+    get:
+      tags: [Exam]
+      summary: Get exam history
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of exam histories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExamHistoryDetailResponse"
+        "401":
+          description: Unauthorized
+
+  /api/exam/history/{id}:
+    get:
+      tags: [Exam]
+      summary: Get detail of a specific exam history
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exam history detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExamHistoryDetailResponse"
+        "401":
+          description: Unauthorized
+        "404":
+          description: History not found
+
+  /api/question:
+    get:
+      tags: [Question]
+      summary: Get question history (only incorrect)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of question histories (incorrect only)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuestionHistoryDetailResponse"
+        "401":
+          description: Unauthorized
+
+  /api/question/chat:
+    post:
+      tags: [Question]
+      summary: AI chat with question
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIChatParams"
+      responses:
+        "200":
+          description: AI chat response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIChatResponse"
+        "401":
+          description: Unauthorized
