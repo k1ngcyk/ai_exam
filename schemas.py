@@ -38,6 +38,13 @@ class ExerciseDetailResponse(BaseModel):
     questions: List[QuestionDetailResponse]
 
 
+class ExerciseListResponse(BaseModel):
+    exercises: List[ExerciseDetailResponse]
+    total: int
+    current_page: int
+    total_page: int
+
+
 class QuestionCorrectResponse(BaseModel):
     question_id: int
     question_type: str
@@ -86,12 +93,26 @@ class ExamHistoryDetailResponse(BaseModel):
     user_answers: List[UserAnswer]
 
 
+class ExamHistoryListResponse(BaseModel):
+    exams: List[ExamHistoryDetailResponse]
+    total: int
+    current_page: int
+    total_page: int
+
+
 class QuestionHistoryDetailResponse(BaseModel):
     user_id: int
     question_id: int
     exam_id: int
     user_answer: str
     is_correct: bool
+
+
+class QuestionHistoryListResponse(BaseModel):
+    questions: List[QuestionHistoryDetailResponse]
+    total: int
+    current_page: int
+    total_page: int
 
 
 class AIChatParams(BaseModel):

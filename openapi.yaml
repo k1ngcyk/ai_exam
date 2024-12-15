@@ -1,497 +1,674 @@
-openapi: 3.0.3
+openapi: 3.0.0
 info:
-  title: Example API
-  version: 1.0.0
-servers:
-  - url: http://localhost:8000
-
-tags:
-  - name: User
-  - name: Exercise
-  - name: Exam
-  - name: Leaderboard
-  - name: Question
-
-components:
-  securitySchemes:
-    BearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-  schemas:
-    UserRegisterParams:
-      type: object
-      properties:
-        login_number:
-          type: string
-        name:
-          type: string
-        depart:
-          type: string
-        job:
-          type: string
-        password:
-          type: string
-      required: [login_number, name, depart, job, password]
-
-    UserLoginParams:
-      type: object
-      properties:
-        login_number:
-          type: string
-        password:
-          type: string
-      required: [login_number, password]
-
-    UserResponse:
-      type: object
-      properties:
-        jwt_token:
-          type: string
-        name:
-          type: string
-        id:
-          type: integer
-        depart:
-          type: string
-        job:
-          type: string
-
-    QuestionDetailResponse:
-      type: object
-      properties:
-        question_id:
-          type: integer
-        question_type:
-          type: string
-        content:
-          type: string
-        options:
-          type: object
-
-    ExerciseDetailResponse:
-      type: object
-      properties:
-        exercise_id:
-          type: integer
-        title:
-          type: string
-        content:
-          type: string
-        questions:
-          type: array
-          items:
-            $ref: "#/components/schemas/QuestionDetailResponse"
-
-    QuestionCorrectResponse:
-      type: object
-      properties:
-        question_id:
-          type: integer
-        question_type:
-          type: string
-        content:
-          type: string
-        options:
-          type: object
-        answer:
-          type: string
-
-    ExamCreateParams:
-      type: object
-      properties:
-        title:
-          type: string
-        exercise_ids:
-          type: array
-          items:
-            type: integer
-      required: [title, exercise_ids]
-
-    ExamDetail:
-      type: object
-      properties:
-        question_ids:
-          type: array
-          items:
-            type: integer
-
-    ExamDetailResponse:
-      type: object
-      properties:
-        exam_id:
-          type: integer
-        questions:
-          type: array
-          items:
-            $ref: "#/components/schemas/QuestionDetailResponse"
-
-    UserAnswer:
-      type: object
-      properties:
-        question_id:
-          type: integer
-        answer:
-          type: string
-      required: [question_id, answer]
-
-    ExamSubmitParams:
-      type: object
-      properties:
-        exam_id:
-          type: integer
-        user_answers:
-          type: array
-          items:
-            $ref: "#/components/schemas/UserAnswer"
-      required: [exam_id, user_answers]
-
-    ExamSubmitResponse:
-      type: object
-      properties:
-        exam_id:
-          type: integer
-        score:
-          type: integer
-        time:
-          type: integer
-        questions:
-          type: array
-          items:
-            $ref: "#/components/schemas/QuestionDetailResponse"
-        user_answers:
-          type: array
-          items:
-            $ref: "#/components/schemas/UserAnswer"
-
-    ExamHistoryDetailResponse:
-      type: object
-      properties:
-        exam_id:
-          type: integer
-        score:
-          type: integer
-        time:
-          type: integer
-        questions:
-          type: array
-          items:
-            $ref: "#/components/schemas/QuestionDetailResponse"
-        user_answers:
-          type: array
-          items:
-            $ref: "#/components/schemas/UserAnswer"
-
-    QuestionHistoryDetailResponse:
-      type: object
-      properties:
-        user_id:
-          type: integer
-        question_id:
-          type: integer
-        exam_id:
-          type: integer
-        user_answer:
-          type: string
-        is_correct:
-          type: boolean
-
-    AIChatParams:
-      type: object
-      properties:
-        exam_id:
-          type: integer
-        question_id:
-          type: integer
-        content:
-          type: string
-      required: [exam_id, question_id, content]
-
-    AIChatResponse:
-      type: object
-      properties:
-        ai_output:
-          type: string
-
+  title: FastAPI
+  version: 0.1.0
 paths:
   /api/user/register:
     post:
-      tags: [User]
-      summary: Register a new user
+      summary: User Register
+      operationId: user_register_api_user_register_post
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/UserRegisterParams"
+        required: true
       responses:
         "200":
-          description: User successfully registered
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserResponse"
-        "400":
-          description: User already exists
-
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
   /api/user/login:
     post:
-      tags: [User]
-      summary: Login user
+      summary: User Login
+      operationId: user_login_api_user_login_post
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/UserLoginParams"
+        required: true
       responses:
         "200":
-          description: Successful login
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/UserResponse"
-        "401":
-          description: Incorrect password or invalid credentials
-
-  /api/exercise:
-    get:
-      tags: [Exercise]
-      summary: Get list of exercises
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-          required: false
-        - in: query
-          name: limit
-          schema:
-            type: integer
-          required: false
-      responses:
-        "200":
-          description: A list of exercises
+        "422":
+          description: Validation Error
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ExerciseDetailResponse"
-
+                $ref: "#/components/schemas/HTTPValidationError"
+  /api/exercise:
+    get:
+      summary: Get Exercise List
+      operationId: get_exercise_list_api_exercise_get
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            title: Page
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            title: Limit
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExerciseListResponse"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
   /api/exercise/{id}:
     get:
-      tags: [Exercise]
-      summary: Get detail of an exercise
+      summary: Get Exercise Detail
+      operationId: get_exercise_detail_api_exercise__id__get
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: integer
+            title: Id
       responses:
         "200":
-          description: Exercise detail
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExerciseDetailResponse"
-        "404":
-          description: Exercise not found
-
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
   /api/exam:
     post:
-      tags: [Exam]
-      summary: Create a new exam
-      security:
-        - BearerAuth: []
+      summary: Create Exam
+      operationId: create_exam_api_exam_post
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/ExamCreateParams"
+        required: true
       responses:
         "200":
-          description: Exam created
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExamDetailResponse"
-        "401":
-          description: Unauthorized
-
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+      security:
+        - HTTPBearer: []
   /api/exam/submit:
     post:
-      tags: [Exam]
-      summary: Submit an exam
-      security:
-        - BearerAuth: []
+      summary: Submit Exam
+      operationId: submit_exam_api_exam_submit_post
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/ExamSubmitParams"
+        required: true
       responses:
         "200":
-          description: Exam submitted
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExamSubmitResponse"
-        "401":
-          description: Unauthorized
-        "404":
-          description: Exam not found
-
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+      security:
+        - HTTPBearer: []
   /api/leaderboard/credits:
     get:
-      tags: [Leaderboard]
-      summary: Leaderboard sorted by credits
+      summary: Leaderboard Credits
+      operationId: leaderboard_credits_api_leaderboard_credits_get
       responses:
         "200":
-          description: Leaderboard by credits
+          description: Successful Response
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    name:
-                      type: string
-                    credit:
-                      type: integer
-                    depart:
-                      type: string
-                    job:
-                      type: string
-
+              schema: {}
   /api/leaderboard/times:
     get:
-      tags: [Leaderboard]
-      summary: Leaderboard sorted by learning time
+      summary: Leaderboard Times
+      operationId: leaderboard_times_api_leaderboard_times_get
       responses:
         "200":
-          description: Leaderboard by time
+          description: Successful Response
           content:
             application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    name:
-                      type: string
-                    learning_time:
-                      type: integer
-                    depart:
-                      type: string
-                    job:
-                      type: string
-
+              schema: {}
   /api/exam/history:
     get:
-      tags: [Exam]
-      summary: Get exam history
+      summary: Exam History
+      operationId: exam_history_api_exam_history_get
       security:
-        - BearerAuth: []
+        - HTTPBearer: []
       parameters:
-        - in: query
-          name: page
+        - name: page
+          in: query
+          required: false
           schema:
             type: integer
-        - in: query
-          name: limit
+            default: 1
+            title: Page
+        - name: limit
+          in: query
+          required: false
           schema:
             type: integer
+            default: 10
+            title: Limit
       responses:
         "200":
-          description: List of exam histories
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ExamHistoryDetailResponse"
-        "401":
-          description: Unauthorized
-
+                $ref: "#/components/schemas/ExamHistoryListResponse"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
   /api/exam/history/{id}:
     get:
-      tags: [Exam]
-      summary: Get detail of a specific exam history
+      summary: Exam History Detail
+      operationId: exam_history_detail_api_exam_history__id__get
       security:
-        - BearerAuth: []
+        - HTTPBearer: []
       parameters:
-        - in: path
-          name: id
+        - name: id
+          in: path
           required: true
           schema:
             type: integer
+            title: Id
       responses:
         "200":
-          description: Exam history detail
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExamHistoryDetailResponse"
-        "401":
-          description: Unauthorized
-        "404":
-          description: History not found
-
-  /api/question:
-    get:
-      tags: [Question]
-      summary: Get question history (only incorrect)
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-        - in: query
-          name: limit
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: List of question histories (incorrect only)
+        "422":
+          description: Validation Error
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/QuestionHistoryDetailResponse"
-        "401":
-          description: Unauthorized
-
+                $ref: "#/components/schemas/HTTPValidationError"
+  /api/question:
+    get:
+      summary: Question History List
+      operationId: question_history_list_api_question_get
+      security:
+        - HTTPBearer: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            title: Page
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            title: Limit
+      responses:
+        "200":
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionHistoryListResponse"
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
   /api/question/chat:
     post:
-      tags: [Question]
-      summary: AI chat with question
-      security:
-        - BearerAuth: []
+      summary: Ai Chat
+      operationId: ai_chat_api_question_chat_post
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/AIChatParams"
+        required: true
       responses:
         "200":
-          description: AI chat response
+          description: Successful Response
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AIChatResponse"
-        "401":
-          description: Unauthorized
+        "422":
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HTTPValidationError"
+      security:
+        - HTTPBearer: []
+components:
+  schemas:
+    AIChatParams:
+      properties:
+        exam_id:
+          type: integer
+          title: Exam Id
+        question_id:
+          type: integer
+          title: Question Id
+        content:
+          type: string
+          title: Content
+      type: object
+      required:
+        - exam_id
+        - question_id
+        - content
+      title: AIChatParams
+    AIChatResponse:
+      properties:
+        ai_output:
+          type: string
+          title: Ai Output
+      type: object
+      required:
+        - ai_output
+      title: AIChatResponse
+    ExamCreateParams:
+      properties:
+        title:
+          type: string
+          title: Title
+        exercise_ids:
+          items:
+            type: integer
+          type: array
+          title: Exercise Ids
+      type: object
+      required:
+        - title
+        - exercise_ids
+      title: ExamCreateParams
+    ExamDetailResponse:
+      properties:
+        exam_id:
+          type: integer
+          title: Exam Id
+        questions:
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+          type: array
+          title: Questions
+      type: object
+      required:
+        - exam_id
+        - questions
+      title: ExamDetailResponse
+    ExamHistoryDetailResponse:
+      properties:
+        exam_id:
+          type: integer
+          title: Exam Id
+        score:
+          type: integer
+          title: Score
+        time:
+          type: integer
+          title: Time
+        questions:
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+          type: array
+          title: Questions
+        user_answers:
+          items:
+            $ref: "#/components/schemas/UserAnswer"
+          type: array
+          title: User Answers
+      type: object
+      required:
+        - exam_id
+        - score
+        - time
+        - questions
+        - user_answers
+      title: ExamHistoryDetailResponse
+    ExamHistoryListResponse:
+      properties:
+        exams:
+          items:
+            $ref: "#/components/schemas/ExamHistoryDetailResponse"
+          type: array
+          title: Exams
+        total:
+          type: integer
+          title: Total
+        current_page:
+          type: integer
+          title: Current Page
+        total_page:
+          type: integer
+          title: Total Page
+      type: object
+      required:
+        - exams
+        - total
+        - current_page
+        - total_page
+      title: ExamHistoryListResponse
+    ExamSubmitParams:
+      properties:
+        exam_id:
+          type: integer
+          title: Exam Id
+        user_answers:
+          items:
+            $ref: "#/components/schemas/UserAnswer"
+          type: array
+          title: User Answers
+      type: object
+      required:
+        - exam_id
+        - user_answers
+      title: ExamSubmitParams
+    ExamSubmitResponse:
+      properties:
+        exam_id:
+          type: integer
+          title: Exam Id
+        score:
+          type: integer
+          title: Score
+        time:
+          type: integer
+          title: Time
+        questions:
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+          type: array
+          title: Questions
+        user_answers:
+          items:
+            $ref: "#/components/schemas/UserAnswer"
+          type: array
+          title: User Answers
+      type: object
+      required:
+        - exam_id
+        - score
+        - time
+        - questions
+        - user_answers
+      title: ExamSubmitResponse
+    ExerciseDetailResponse:
+      properties:
+        exercise_id:
+          type: integer
+          title: Exercise Id
+        title:
+          type: string
+          title: Title
+        content:
+          type: string
+          title: Content
+        questions:
+          items:
+            $ref: "#/components/schemas/QuestionDetailResponse"
+          type: array
+          title: Questions
+      type: object
+      required:
+        - exercise_id
+        - title
+        - content
+        - questions
+      title: ExerciseDetailResponse
+    ExerciseListResponse:
+      properties:
+        exercises:
+          items:
+            $ref: "#/components/schemas/ExerciseDetailResponse"
+          type: array
+          title: Exercises
+        total:
+          type: integer
+          title: Total
+        current_page:
+          type: integer
+          title: Current Page
+        total_page:
+          type: integer
+          title: Total Page
+      type: object
+      required:
+        - exercises
+        - total
+        - current_page
+        - total_page
+      title: ExerciseListResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: "#/components/schemas/ValidationError"
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    QuestionDetailResponse:
+      properties:
+        question_id:
+          type: integer
+          title: Question Id
+        question_type:
+          type: string
+          title: Question Type
+        content:
+          type: string
+          title: Content
+        options:
+          title: Options
+      type: object
+      required:
+        - question_id
+        - question_type
+        - content
+        - options
+      title: QuestionDetailResponse
+    QuestionHistoryDetailResponse:
+      properties:
+        user_id:
+          type: integer
+          title: User Id
+        question_id:
+          type: integer
+          title: Question Id
+        exam_id:
+          type: integer
+          title: Exam Id
+        user_answer:
+          type: string
+          title: User Answer
+        is_correct:
+          type: boolean
+          title: Is Correct
+      type: object
+      required:
+        - user_id
+        - question_id
+        - exam_id
+        - user_answer
+        - is_correct
+      title: QuestionHistoryDetailResponse
+    QuestionHistoryListResponse:
+      properties:
+        questions:
+          items:
+            $ref: "#/components/schemas/QuestionHistoryDetailResponse"
+          type: array
+          title: Questions
+        total:
+          type: integer
+          title: Total
+        current_page:
+          type: integer
+          title: Current Page
+        total_page:
+          type: integer
+          title: Total Page
+      type: object
+      required:
+        - questions
+        - total
+        - current_page
+        - total_page
+      title: QuestionHistoryListResponse
+    UserAnswer:
+      properties:
+        question_id:
+          type: integer
+          title: Question Id
+        answer:
+          type: string
+          title: Answer
+      type: object
+      required:
+        - question_id
+        - answer
+      title: UserAnswer
+    UserLoginParams:
+      properties:
+        login_number:
+          type: string
+          title: Login Number
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+        - login_number
+        - password
+      title: UserLoginParams
+    UserRegisterParams:
+      properties:
+        login_number:
+          type: string
+          title: Login Number
+        name:
+          type: string
+          title: Name
+        depart:
+          type: string
+          title: Depart
+        job:
+          type: string
+          title: Job
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+        - login_number
+        - name
+        - depart
+        - job
+        - password
+      title: UserRegisterParams
+    UserResponse:
+      properties:
+        jwt_token:
+          type: string
+          title: Jwt Token
+        name:
+          type: string
+          title: Name
+        id:
+          type: integer
+          title: Id
+        depart:
+          type: string
+          title: Depart
+        job:
+          type: string
+          title: Job
+      type: object
+      required:
+        - jwt_token
+        - name
+        - id
+        - depart
+        - job
+      title: UserResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      title: ValidationError
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer

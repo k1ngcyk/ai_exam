@@ -2,12 +2,14 @@ from fastapi import FastAPI, Depends, HTTPException, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, func
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
 from jose import jwt
 import time
 import asyncio
+from math import ceil
+
 
 from models import Base, User, Exercise, Question, Exam, ExamHistory, QuestionHistory
 from schemas import (
@@ -15,13 +17,16 @@ from schemas import (
     UserLoginParams,
     UserResponse,
     ExerciseDetailResponse,
+    ExerciseListResponse,
     QuestionDetailResponse,
     ExamCreateParams,
     ExamDetailResponse,
     ExamSubmitParams,
     ExamSubmitResponse,
     ExamHistoryDetailResponse,
+    ExamHistoryListResponse,
     QuestionHistoryDetailResponse,
+    QuestionHistoryListResponse,
     AIChatParams,
     AIChatResponse,
     UserAnswer,
@@ -129,8 +134,13 @@ def user_login(params: UserLoginParams, db: Session = Depends(get_db)):
     )
 
 
-@app.get("/api/exercise", response_model=List[ExerciseDetailResponse])
+@app.get("/api/exercise", response_model=ExerciseListResponse)
 def get_exercise_list(page: int = 1, limit: int = 10, db: Session = Depends(get_db)):
+    total = db.query(func.count(Exercise.id)).scalar()
+    if limit <= 0:
+        limit = 10  # default fallback to avoid division by zero
+    total_pages = ceil(total / limit) if total > 0 else 1
+
     exercises = db.query(Exercise).offset((page - 1) * limit).limit(limit).all()
     response = []
     for ex in exercises:
@@ -152,7 +162,12 @@ def get_exercise_list(page: int = 1, limit: int = 10, db: Session = Depends(get_
                 questions=questions_resp,
             )
         )
-    return response
+    return ExerciseListResponse(
+        exercises=response,
+        total=total,
+        current_page=page,
+        total_page=total_pages,
+    )
 
 
 @app.get("/api/exercise/{id}", response_model=ExerciseDetailResponse)
@@ -358,13 +373,22 @@ def leaderboard_times(db: Session = Depends(get_db)):
     ]
 
 
-@app.get("/api/exam/history", response_model=List[ExamHistoryDetailResponse])
+@app.get("/api/exam/history", response_model=ExamHistoryListResponse)
 def exam_history(
     page: int = 1,
     limit: int = 10,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    total = (
+        db.query(func.count(ExamHistory.id))
+        .filter(ExamHistory.user_id == user.id)
+        .scalar()
+    )
+    if limit <= 0:
+        limit = 10
+    total_pages = ceil(total / limit) if total > 0 else 1
+
     histories = (
         db.query(ExamHistory)
         .filter(ExamHistory.user_id == user.id)
@@ -409,7 +433,9 @@ def exam_history(
                 user_answers=user_answers_resp,
             )
         )
-    return results
+    return ExamHistoryListResponse(
+        exams=results, total=total, current_page=page, total_page=total_pages
+    )
 
 
 @app.get("/api/exam/history/{id}", response_model=ExamHistoryDetailResponse)
@@ -458,13 +484,22 @@ def exam_history_detail(
     )
 
 
-@app.get("/api/question", response_model=List[QuestionHistoryDetailResponse])
+@app.get("/api/question", response_model=QuestionHistoryListResponse)
 def question_history_list(
     page: int = 1,
     limit: int = 10,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    total = (
+        db.query(func.count(QuestionHistory.id))
+        .filter(QuestionHistory.user_id == user.id, QuestionHistory.is_correct == False)
+        .scalar()
+    )
+    if limit <= 0:
+        limit = 10
+    total_pages = ceil(total / limit) if total > 0 else 1
+
     qhs = (
         db.query(QuestionHistory)
         .filter(QuestionHistory.user_id == user.id, QuestionHistory.is_correct == False)
@@ -483,7 +518,9 @@ def question_history_list(
                 is_correct=qh.is_correct,
             )
         )
-    return results
+    return QuestionHistoryListResponse(
+        questions=results, total=total, current_page=page, total_page=total_pages
+    )
 
 
 async def generate_text():
